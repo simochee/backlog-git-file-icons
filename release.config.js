@@ -1,4 +1,4 @@
-const WXT_ZIP_CMD = String.raw`
+const WXT_ZIP_CMD = `
   pnpm wxt zip
   pnpm wxt zip -b firefox
 `;
