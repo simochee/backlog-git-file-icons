@@ -1,3 +1,4 @@
+<p align="center"><img src="assets/icon.png" width="96"></p>
 <h1 align="center">File Icons for Backlog Git</h1>
 
 <p align="center">
