@@ -2,19 +2,28 @@ export const findFileIcon = async (text: string) => {
 	const { fileIcons } = await import(
 		"catppuccin-vsc-icons/src/defaults/fileIcons"
 	);
+	const fileName = text.toLowerCase();
 
 	for (const [key, { fileExtensions = [], fileNames = [] }] of Object.entries(
 		fileIcons,
 	)) {
 		for (const name of fileNames) {
-			if (text.toLowerCase() === name) {
+			if (fileName === name) {
 				return key;
 			}
 		}
 
 		for (const extension of fileExtensions) {
-			if (text.toLowerCase().endsWith(`.${extension}`)) {
+			if (fileName.endsWith(`.${extension}`)) {
 				return key;
+			}
+		}
+
+		if ("escape" in RegExp && typeof RegExp.escape === "function") {
+			for (const name of fileNames) {
+				if (new RegExp(`\\b${RegExp.escape(name)}\\.`).test(fileName)) {
+					return key;
+				}
 			}
 		}
 	}
@@ -22,11 +31,12 @@ export const findFileIcon = async (text: string) => {
 	return "_file";
 };
 
-export const findFolderIcon = async (text: string) => {
+export const findFolderIcon = async (text: string | string[]) => {
 	const { folderIcons } = await import(
 		"catppuccin-vsc-icons/src/defaults/folderIcons"
 	);
-	const folderName = text.split("/").pop() || "";
+	const folders = Array.isArray(text) ? text : text.toLowerCase().split("/");
+	const folderName = folders.pop() || "";
 
 	if (folderName === "..") {
 		return "_root_open";
@@ -34,8 +44,18 @@ export const findFolderIcon = async (text: string) => {
 
 	for (const [key, { folderNames = [] }] of Object.entries(folderIcons)) {
 		for (const name of folderNames) {
-			if (folderName.toLowerCase() === name) {
+			if (folderName === name) {
 				return `folder_${key}`;
+			}
+		}
+	}
+
+	for (const [key, { folderNames = [] }] of Object.entries(folderIcons)) {
+		for (const name of folderNames) {
+			for (const folder of folders.toReversed()) {
+				if (name === folder) {
+					return `folder_${key}`;
+				}
 			}
 		}
 	}

@@ -1,6 +1,6 @@
 import { getIconUrl, hasIcon } from "@/entrypoints/content/catppuccin";
-import { raf } from "@/entrypoints/content/dom";
 import { findFileIcon, findFolderIcon } from "@/entrypoints/content/icon";
+import { deduplicate } from "@/entrypoints/content/util";
 
 export default defineContentScript({
 	matches: [
@@ -12,60 +12,75 @@ export default defineContentScript({
 	async main() {
 		const { querySelector } = await import("./dom");
 
-		querySelector(".cell-file-name", async (node) => {
-			await raf();
+		querySelector(
+			".cell-file-name",
+			deduplicate(async (node) => {
+				if (hasIcon(node)) return;
 
-			if (hasIcon(node)) return;
+				const iconEl = node.querySelector("img");
 
-			const iconEl = node.querySelector("img");
+				if (!iconEl) return;
 
-			if (!iconEl) return;
+				const text = node.textContent?.trim() || "";
+				const icon = iconEl.src.includes("ico_folder")
+					? await findFolderIcon(text)
+					: await findFileIcon(text);
 
-			const text = node.textContent?.trim() || "";
-			const icon = iconEl.src.includes("ico_folder")
-				? await findFolderIcon(text)
-				: await findFileIcon(text);
+				iconEl.setAttribute("src", getIconUrl(icon));
+				iconEl.removeAttribute("srcset");
+				iconEl.setAttribute("width", "20px");
+				iconEl.setAttribute("height", "18px");
+				iconEl.style.objectFit = "contain";
+			}),
+		);
 
-			iconEl.setAttribute("src", getIconUrl(icon));
-			iconEl.removeAttribute("srcset");
-			iconEl.setAttribute("width", "20px");
-			iconEl.setAttribute("height", "18px");
-			iconEl.style.objectFit = "contain";
-		});
+		querySelector(
+			".updated-list__path",
+			deduplicate(async (node) => {
+				if (hasIcon(node)) return;
 
-		querySelector(".updated-list__path", async (node) => {
-			await raf();
+				const folders = node.textContent?.trim().split("/") || [];
+				const fileName =
+					folders.splice(folders.length - 1, 1)[0] || "_root_open";
 
-			if (hasIcon(node)) return;
+				const folderIcon =
+					folders.length > 0 ? await findFolderIcon(folders) : "_root";
+				const fileIcon = await findFileIcon(fileName);
 
-			const fileName =
-				node.textContent?.trim().split("/").pop() || "_root_open";
-			const icon = await findFileIcon(fileName);
+				for (const icon of [fileIcon, folderIcon]) {
+					const imgEl = document.createElement("img");
+					imgEl.src = getIconUrl(icon);
+					imgEl.style.marginRight = "4px";
+					imgEl.style.transform = "translateY(-25%)";
 
-			const imgEl = document.createElement("img");
-			imgEl.src = getIconUrl(icon);
-			imgEl.style.marginRight = "4px";
-			imgEl.style.transform = "translateY(-25%)";
+					node.querySelector("a")?.prepend(imgEl);
+					node.querySelector("del")?.prepend(imgEl);
+				}
+			}),
+		);
 
-			node.querySelector("a")?.prepend(imgEl);
-			node.querySelector("del")?.prepend(imgEl);
-		});
+		querySelector(
+			".code-view__header-path",
+			deduplicate(async (node) => {
+				if (hasIcon(node)) return;
 
-		querySelector(".code-view__header-path", async (node) => {
-			await raf();
+				const folders = node.textContent?.trim().split("/") || [];
+				const fileName =
+					folders.splice(folders.length - 1, 1)[0] || "_root_open";
 
-			if (hasIcon(node)) return;
+				const folderIcon =
+					folders.length > 0 ? await findFolderIcon(folders) : "_root";
+				const fileIcon = await findFileIcon(fileName);
 
-			const fileName =
-				node.textContent?.trim().split("/").pop() || "_root_open";
-			const icon = await findFileIcon(fileName);
+				for (const icon of [fileIcon, folderIcon]) {
+					const imgEl = document.createElement("img");
+					imgEl.src = getIconUrl(icon);
+					imgEl.style.marginRight = "4px";
+					imgEl.style.transform = "translateY(-15%)";
 
-			const imgEl = document.createElement("img");
-			imgEl.src = getIconUrl(icon);
-			imgEl.style.marginRight = "4px";
-			imgEl.style.transform = "translateY(-15%)";
-
-			node.prepend(imgEl);
-		});
+					node.prepend(imgEl);
+				}
+			}),
+		);
 	},
 });
