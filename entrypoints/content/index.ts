@@ -1,4 +1,5 @@
-import { getIconUrl } from "@/entrypoints/content/catppuccin";
+import { getIconUrl, hasIcon } from "@/entrypoints/content/catppuccin";
+import { raf } from "@/entrypoints/content/dom";
 import { findFileIcon, findFolderIcon } from "@/entrypoints/content/icon";
 
 export default defineContentScript({
@@ -12,6 +13,10 @@ export default defineContentScript({
 		const { querySelector } = await import("./dom");
 
 		querySelector(".cell-file-name", async (node) => {
+			await raf();
+
+			if (hasIcon(node)) return;
+
 			const iconEl = node.querySelector("img");
 
 			if (!iconEl) return;
@@ -21,8 +26,6 @@ export default defineContentScript({
 				? await findFolderIcon(text)
 				: await findFileIcon(text);
 
-			console.log(iconEl.src.includes("ico_folder"), icon);
-
 			iconEl.setAttribute("src", getIconUrl(icon));
 			iconEl.removeAttribute("srcset");
 			iconEl.setAttribute("width", "20px");
@@ -31,6 +34,10 @@ export default defineContentScript({
 		});
 
 		querySelector(".updated-list__path", async (node) => {
+			await raf();
+
+			if (hasIcon(node)) return;
+
 			const fileName =
 				node.textContent?.trim().split("/").pop() || "_root_open";
 			const icon = await findFileIcon(fileName);
@@ -45,6 +52,10 @@ export default defineContentScript({
 		});
 
 		querySelector(".code-view__header-path", async (node) => {
+			await raf();
+
+			if (hasIcon(node)) return;
+
 			const fileName =
 				node.textContent?.trim().split("/").pop() || "_root_open";
 			const icon = await findFileIcon(fileName);

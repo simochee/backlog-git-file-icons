@@ -30,3 +30,5 @@ export const querySelector = (
 	observer.observe(document.body, { childList: true, subtree: true });
 	nodeMatcher(document.body);
 };
+
+export const raf = () => new Promise((_resolve) => requestAnimationFrame(raf));
