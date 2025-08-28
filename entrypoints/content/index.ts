@@ -78,8 +78,39 @@ export default defineContentScript({
 					imgEl.style.marginRight = "4px";
 					imgEl.style.transform = "translateY(-15%)";
 
+					if (node.querySelector(`img[src="${CSS.escape(imgEl.src)}"]`))
+						continue;
+
 					node.prepend(imgEl);
 				}
+			}),
+		);
+
+		querySelector(
+			"[data-bprplus-directory]",
+			deduplicate(async (node) => {
+				const { bprplusDirectory = "" } = node.dataset;
+
+				const folderIcon = await findFolderIcon(bprplusDirectory);
+				const imgEl = document.createElement("img");
+				imgEl.src = getIconUrl(folderIcon);
+				imgEl.style.marginRight = "4px";
+				imgEl.style.transform = "translateY(-15%)";
+
+				node.prepend(imgEl);
+			}),
+		);
+
+		querySelector(
+			"[data-bprplus-file]",
+			deduplicate(async (node) => {
+				const { bprplusFile = "" } = node.dataset;
+
+				const fileIcon = await findFileIcon(bprplusFile);
+				const imgEl = document.createElement("img");
+				imgEl.src = getIconUrl(fileIcon);
+
+				node.parentElement?.prepend(imgEl);
 			}),
 		);
 	},
