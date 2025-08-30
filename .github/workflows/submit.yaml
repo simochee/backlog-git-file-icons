@@ -3,52 +3,115 @@ name: Submit to Web Store
 on:
   workflow_dispatch:
     inputs:
-      dry-run:
-        description: Dry run
-        required: false
-        type: boolean
-        default: true
-  push:
-    branches:
-      - main
+      environment:
+        type: environment
+        description: Environment to submit extension
+        default: dry-run
+        required: true
+      newversion:
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        description: New version
+        default: patch
+        required: true
 
 jobs:
-  submit:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
+    outputs:
+      new_tag: ${{ steps.bump_version.outputs.new_tag }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
         with:
-          run_install: false
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: mise.toml
-          cache: pnpm
+          node-version: 24
+          cache: npm
+
+      - name: configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: get the latest tag
+        id: get_latest_tag
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=${latest_tag}" >> $GITHUB_OUTPUT
+
+      - name: bump version
+        id: bump_version
+        run: |
+          npm version ${{ steps.get_latest_tag.outputs.latest_tag }} --no-git-tag-version --allow-same-version
+          npm version ${{ github.event.inputs.newversion }} --force
+
+          new_tag=$(git describe --tags --abbrev=0)
+          echo "Created new tag: ${new_tag}"
+          echo "new_tag=${new_tag}" >> $GITHUB_OUTPUT
 
       - name: install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: npm ci
 
-      - name: prepare wxt
-        run: pnpm wxt prepare
+      - name: zip extension
+        run: npx wxt zip
 
-      - name: release with semantic-release
-        run: pnpm semantic-release
+      - uses: actions/upload-artifact@v4
+        with:
+          path: .output
+          include-hidden-files: true
+
+  submit:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          path: .output/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: install dependencies
+        run: npm ci
+
+      - name: configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: update version
+        run: npm version ${{ needs.build.outputs.new_tag }}
+
+      - name: submit to web store
+        run: |
+          npx wxt submit \
+            --chrome-zip .output/*-chrome.zip \
+            --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DRY_RUN: ${{ inputs.dry-run || 'false' }}
+          DRY_RUN: ${{ inputs.environment == 'dry-run' }}
           CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          CHROME_SKIP_SUBMIT_REVIEW: 'true'
           FIREFOX_EXTENSION_ID: ${{ vars.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
-          FIREFOX_CHANNEL: listed
+
+      - name: push the new tag
+        if: inputs.environment != 'dry-run'
+        run: git push origin ${{ needs.build.outputs.new_tag }}
