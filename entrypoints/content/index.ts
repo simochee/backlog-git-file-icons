@@ -87,11 +87,11 @@ export default defineContentScript({
 		);
 
 		querySelector(
-			"[data-bprplus-directory]",
+			"[data-blg-git-folder-icon]",
 			deduplicate(async (node) => {
-				const { bprplusDirectory = "" } = node.dataset;
+				const { blgGitFolderIcon = "" } = node.dataset;
 
-				const folderIcon = await findFolderIcon(bprplusDirectory);
+				const folderIcon = await findFolderIcon(blgGitFolderIcon);
 				const imgEl = document.createElement("img");
 				imgEl.src = getIconUrl(folderIcon);
 				imgEl.style.marginRight = "4px";
@@ -102,11 +102,11 @@ export default defineContentScript({
 		);
 
 		querySelector(
-			"[data-bprplus-file]",
+			"[data-blg-git-file-icon]",
 			deduplicate(async (node) => {
-				const { bprplusFile = "" } = node.dataset;
+				const { blgGitFileIcon = "" } = node.dataset;
 
-				const fileIcon = await findFileIcon(bprplusFile);
+				const fileIcon = await findFileIcon(blgGitFileIcon);
 				const imgEl = document.createElement("img");
 				imgEl.src = getIconUrl(fileIcon);
 
