@@ -1,4 +1,5 @@
 name: Submit to Web Store
+run-name: "Submit to Web Store (env: ${{ inputs.environment }})"
 
 on:
   workflow_dispatch:
