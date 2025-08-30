@@ -89,10 +89,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+          cache: pnpm
 
       - name: install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: configure git
         run: |
@@ -104,7 +104,7 @@ jobs:
 
       - name: submit to web store
         run: |
-          npx wxt submit \
+          pnpm wxt submit \
             --chrome-zip .output/*-chrome.zip \
             --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
         env:
