@@ -28,10 +28,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
+          node-version-file: mise.toml
+          cache: pnpm
 
       - name: configure git
         run: |
@@ -55,10 +59,12 @@ jobs:
           echo "new_tag=${new_tag}" >> $GITHUB_OUTPUT
 
       - name: install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: zip extension
-        run: npx wxt zip
+        run: |
+          pnpm wxt zip
+          pnpm wxt zip -b firefox
 
       - uses: actions/upload-artifact@v4
         with:
